@@ -1,0 +1,82 @@
+import pandas as pd
+import numpy as np
+import matplotlib as plt
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
+
+def warn(*args, **kwargs):
+    pass
+import warnings
+warnings.warn = warn
+
+np.set_printoptions(precision=3, suppress=True)
+
+NRL = pd.read_csv('https://raw.githubusercontent.com/MaddocksJ27/NRLCSV/refs/heads/main/NRL%20data.csv')
+NRL.head()
+
+X = NRL.drop(['PointsDiff', 'Year', 'Team'], axis=1)
+y = NRL['PointsDiff']
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+s = StandardScaler()
+
+X_train_s = s.fit_transform(X_train)
+
+X_test_s = s.transform(X_test)
+
+from sklearn.linear_model import LinearRegression
+lr = LinearRegression()
+
+lr.fit(X_train_s, y_train)
+
+y_pred = lr.predict(X_test_s)
+
+from sklearn.metrics import r2_score
+
+r2_score(y_test, y_pred)
+print(lr.coef_)
+
+from sklearn.linear_model import Lasso
+from sklearn.preprocessing import PolynomialFeatures
+
+pf = PolynomialFeatures(degree=2, include_bias=False,)
+X_pf = pf.fit_transform(X_train)
+x_test_pf = pf.transform(X_test)
+X_pf_ss = s.fit_transform(X_pf)
+X_t_pf_s = s.transform(x_test_pf)
+las = Lasso()
+las.fit(X_pf_ss, y_train)
+las.coef_ 
+las01 = Lasso(alpha = 0.1)
+las01.fit(X_pf_ss, y_train)
+print('sum of coefficients:', abs(las01.coef_).sum() )
+print('number of coefficients not equal to 0:', (las01.coef_!=0).sum())
+
+las1 = Lasso(alpha = 1)
+las1.fit(X_pf_ss, y_train)
+print('sum of coefficients:',abs(las1.coef_).sum() )
+print('number of coefficients not equal to 0:',(las1.coef_!=0).sum())
+
+y_pred_las01 = las.predict(X_t_pf_s)
+r2_score(y_test, y_pred_las01)
+
+y_pred_las1 = las1.predict(X_t_pf_s)
+r2_score(y_test, y_pred_las1)
+
+from sklearn.linear_model import Ridge
+r = Ridge(alpha = 0.001)
+r.fit(X_pf_ss, y_train)
+y_pred_r = r.predict(X_t_pf_s)
+r2_score(y_test, y_pred_r)
+
+from sklearn.linear_model import ElasticNet
+EN = ElasticNet(alpha = 0.1, max_iter = 1000)
+EN.fit(X_pf_ss, y_train)
+y_pred_EN = EN.predict(X_t_pf_s)
+r2_score(y_test, y_pred_EN)
+
+#As we can see from the various linear regression models ran prior our best model is las01 which returned a R2 score of 0.515..., therefore we will choose this model as it will have the best ability to predict point differentials when new inputs are added.
+
+#Using the projected point differential for the season we can compare the current standings and highlight teams which we expect to either rise sustantially or drop substantially and make season long bets on win totals accordingly. 
+
